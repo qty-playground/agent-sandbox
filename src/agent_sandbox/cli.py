@@ -160,10 +160,6 @@ def get_project_rules(work_dir: Path, home: Path) -> str:
 (allow file-read*
     (subpath "{home}/.local"))
 
-;; Deny writes to home directory (except specific allowed paths)
-(deny file-write*
-    (subpath "{home}"))
-
 ;; Allow writing current working directory
 (allow file-write*
     (subpath "{work_dir}"))
