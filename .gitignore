@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+env/
+.venv/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.sb
+*.log
+tmp/
+temp/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
