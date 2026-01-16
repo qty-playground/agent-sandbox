@@ -14,10 +14,17 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 
 
-def get_common_rules(home: Path) -> str:
+def get_common_rules(home: Path, allow_ssh_keys: bool = False, allow_env_read: bool = False,
+                     allow_aws_config: bool = False, allow_cloud_config: bool = False) -> str:
     """
     Common security rules applied to all agents
     Protects sensitive files: SSH keys, cloud credentials, GPG, etc.
+
+    Args:
+        allow_ssh_keys: Allow reading SSH private keys
+        allow_env_read: Allow reading environment files
+        allow_aws_config: Allow reading AWS credentials
+        allow_cloud_config: Allow reading all cloud provider configs
     """
     ssh_auth_sock = os.environ.get('SSH_AUTH_SOCK', '')
     ssh_agent_rule = ""
@@ -28,11 +35,16 @@ def get_common_rules(home: Path) -> str:
     (literal "{ssh_auth_sock}"))
 """
 
-    return f"""{ssh_agent_rule}
-;; ========================================
-;; COMMON: Sensitive file protection
-;; ========================================
-
+    # SSH keys rules
+    if allow_ssh_keys:
+        ssh_rules = f"""
+;; SSH keys: ALLOWED (--allow-ssh-keys enabled)
+;; WARNING: Private keys are accessible
+(allow file-read*
+    (subpath "{home}/.ssh"))
+"""
+    else:
+        ssh_rules = f"""
 ;; Deny SSH directory (protect all private keys and sensitive files)
 (deny file-read* file-write*
     (subpath "{home}/.ssh"))
@@ -44,24 +56,73 @@ def get_common_rules(home: Path) -> str:
     (literal "{home}/.ssh/known_hosts")
     (literal "{home}/.ssh/known_hosts.old")
     (regex #"{home}/\\.ssh/.*\\.pub$"))
+"""
 
+    # Cloud credentials rules
+    if allow_cloud_config:
+        cloud_rules = f"""
+;; Cloud credentials: ALLOWED (--allow-cloud-config enabled)
+;; WARNING: Cloud credentials are accessible
+(allow file-read*
+    (subpath "{home}/.aws")
+    (subpath "{home}/.azure")
+    (subpath "{home}/.gcloud")
+    (subpath "{home}/.kube"))
+"""
+    elif allow_aws_config:
+        cloud_rules = f"""
+;; AWS credentials: ALLOWED (--allow-aws-config enabled)
+;; WARNING: AWS credentials are accessible
+(allow file-read*
+    (subpath "{home}/.aws"))
+
+;; Deny other cloud service credentials
+(deny file-read* file-write*
+    (subpath "{home}/.azure")
+    (subpath "{home}/.gcloud")
+    (subpath "{home}/.kube"))
+"""
+    else:
+        cloud_rules = f"""
 ;; Deny cloud service credentials (always protected)
 (deny file-read* file-write*
     (subpath "{home}/.aws")
     (subpath "{home}/.azure")
     (subpath "{home}/.gcloud")
     (subpath "{home}/.kube"))
+"""
 
-;; Deny GPG keys (always protected)
-(deny file-read* file-write*
-    (subpath "{home}/.gnupg"))
-
+    # Environment files rules
+    if allow_env_read:
+        env_rules = f"""
+;; Environment files: ALLOWED (--allow-env-read enabled)
+;; WARNING: Environment files are accessible
+(allow file-read*
+    (literal "{home}/.env")
+    (literal "{home}/.envrc")
+    (regex #"{home}/\\.env\\..*$"))
+"""
+    else:
+        env_rules = f"""
 ;; Deny environment variable files in home
 (deny file-read* file-write*
     (literal "{home}/.env")
     (literal "{home}/.envrc")
     (regex #"{home}/\\.env\\..*$"))
+"""
 
+    return f"""{ssh_agent_rule}
+;; ========================================
+;; COMMON: Sensitive file protection
+;; ========================================
+
+{ssh_rules}
+{cloud_rules}
+;; Deny GPG keys (always protected)
+(deny file-read* file-write*
+    (subpath "{home}/.gnupg"))
+
+{env_rules}
 ;; Deny private key files (always protected)
 (deny file-read* file-write*
     (regex #"{home}/[^/]*\\.pem$")
@@ -186,7 +247,9 @@ def get_agent_rules(agent: str, home: Path) -> str:
 """
 
 
-def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "") -> str:
+def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
+                            allow_ssh_keys: bool = False, allow_env_read: bool = False,
+                            allow_aws_config: bool = False, allow_cloud_config: bool = False) -> str:
     """
     Dynamically generate sandbox profile combining three layers:
     1. Common security rules (sensitive file protection)
@@ -199,7 +262,7 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "") -> str
 ;; Default allow all operations (protect via explicit deny)
 ;; ========================================
 (allow default)
-{get_common_rules(home)}
+{get_common_rules(home, allow_ssh_keys, allow_env_read, allow_aws_config, allow_cloud_config)}
 {get_project_rules(work_dir, home)}
 {get_agent_rules(agent, home)}
 """
@@ -218,12 +281,19 @@ def print_usage(error_msg: Optional[str] = None):
     print("  --work-dir DIR         Working directory (default: current directory)", file=sys.stderr)
     print("  --dry-run              Show profile content without executing", file=sys.stderr)
     print("  --help                 Show this help message", file=sys.stderr)
+    print("\nPermission Flags:", file=sys.stderr)
+    print("  --allow-ssh-keys       Allow reading SSH private keys", file=sys.stderr)
+    print("  --allow-env-read       Allow reading environment files (.env, .envrc)", file=sys.stderr)
+    print("  --allow-aws-config     Allow reading AWS credentials", file=sys.stderr)
+    print("  --allow-cloud-config   Allow reading all cloud provider configs (AWS, GCP, Azure, k8s)", file=sys.stderr)
     print("\nExamples:", file=sys.stderr)
-    print("  agbox claude                      # Run Claude Code", file=sys.stderr)
-    print("  agbox codex                       # Run Codex CLI", file=sys.stderr)
-    print("  agbox my_alias                    # Run shell alias (auto-detected)", file=sys.stderr)
-    print("  agbox --verbose claude            # Show details", file=sys.stderr)
-    print("  agbox --dry-run python test.py    # Show profile only", file=sys.stderr)
+    print("  agbox claude                                  # Run Claude Code", file=sys.stderr)
+    print("  agbox codex                                   # Run Codex CLI", file=sys.stderr)
+    print("  agbox my_alias                                # Run shell alias (auto-detected)", file=sys.stderr)
+    print("  agbox --verbose claude                        # Show details", file=sys.stderr)
+    print("  agbox --dry-run python test.py                # Show profile only", file=sys.stderr)
+    print("  agbox --allow-ssh-keys c4d                    # Allow SSH key access", file=sys.stderr)
+    print("  agbox --allow-aws-config --allow-env-read c4d # Allow AWS and env access", file=sys.stderr)
     print("\nNote: If command is not found, agbox will automatically try to execute it as a shell alias.", file=sys.stderr)
     print("\nDebug tool:", file=sys.stderr)
     print("  agbox-debug                       # Monitor sandbox violations", file=sys.stderr)
@@ -248,6 +318,11 @@ def parse_args(args: List[str]) -> Tuple[Dict[str, any], List[str]]:
         'agent': None,
         'work_dir': None,
         'dry_run': False,
+        # Permission flags
+        'allow_ssh_keys': False,
+        'allow_env_read': False,
+        'allow_aws_config': False,
+        'allow_cloud_config': False,
     }
 
     i = 0
@@ -296,6 +371,23 @@ def parse_args(args: List[str]) -> Tuple[Dict[str, any], List[str]]:
             options['dry_run'] = True
             i += 1
 
+        # Permission flags
+        elif arg == '--allow-ssh-keys':
+            options['allow_ssh_keys'] = True
+            i += 1
+
+        elif arg == '--allow-env-read':
+            options['allow_env_read'] = True
+            i += 1
+
+        elif arg == '--allow-aws-config':
+            options['allow_aws_config'] = True
+            i += 1
+
+        elif arg == '--allow-cloud-config':
+            options['allow_cloud_config'] = True
+            i += 1
+
         # Unknown option
         elif arg.startswith('-'):
             print_usage(f"Unknown option: {arg}")
@@ -336,7 +428,13 @@ def main():
     home = Path.home()
 
     # Generate sandbox profile
-    profile_content = generate_sandbox_profile(work_dir, home, options['agent'] or '')
+    profile_content = generate_sandbox_profile(
+        work_dir, home, options['agent'] or '',
+        allow_ssh_keys=options['allow_ssh_keys'],
+        allow_env_read=options['allow_env_read'],
+        allow_aws_config=options['allow_aws_config'],
+        allow_cloud_config=options['allow_cloud_config']
+    )
 
     # Dry run mode
     if options['dry_run']:
