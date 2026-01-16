@@ -163,33 +163,24 @@ def get_project_rules(work_dir: Path, home: Path) -> str:
 
 def get_agent_rules(agent: str, home: Path) -> str:
     """
-    Agent-specific configuration rules
-    Each AI agent or tool may need access to its own config directory
+    Common agent configuration rules
+    Always allow writes to common AI agent directories
     """
-    agent_configs = {
-        'claude': f"""
+    return f"""
 ;; ========================================
-;; AGENT: Claude Code specific rules
+;; AGENTS: Common AI agent config directories
 ;; ========================================
 
-;; Allow writing Claude config
+;; Allow writing Claude Code config
 (allow file-write*
     (literal "{home}/.claude.json")
     (subpath "{home}/.claude")
     (subpath "{home}/.config/claude-code"))
-""",
-        'codex': f"""
-;; ========================================
-;; AGENT: Codex CLI specific rules
-;; ========================================
 
-;; Allow writing Codex config
+;; Allow writing Codex CLI config
 (allow file-write*
     (subpath "{home}/.codex"))
-""",
-    }
-
-    return agent_configs.get(agent, "")
+"""
 
 
 def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "") -> str:
