@@ -37,8 +37,10 @@ def get_common_rules(home: Path) -> str:
 (deny file-read* file-write*
     (subpath "{home}/.ssh"))
 
-;; Allow reading safe SSH files only
+;; Allow reading safe SSH files and configs
 (allow file-read*
+    (literal "{home}/.ssh")
+    (literal "{home}/.ssh/config")
     (literal "{home}/.ssh/known_hosts")
     (literal "{home}/.ssh/known_hosts.old")
     (regex #"{home}/\\.ssh/.*\\.pub$"))
