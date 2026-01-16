@@ -123,6 +123,7 @@ def get_project_rules(work_dir: Path, home: Path) -> str:
 ;; Allow common shell tool caches and temporary files
 (allow file-write*
     (subpath "{home}/.cache")
+    (subpath "{home}/.config")
     (regex #"{home}/\\.zcompdump.*$"))
 
 ;; Allow reading Shell RC files (but deny writes)
