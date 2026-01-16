@@ -118,6 +118,11 @@ def get_project_rules(work_dir: Path, home: Path) -> str:
     (subpath "/var/tmp")
     (subpath "/private/tmp"))
 
+;; Allow common shell tool caches and temporary files
+(allow file-write*
+    (subpath "{home}/.cache")
+    (regex #"{home}/\\.zcompdump.*$"))
+
 ;; Allow reading Shell RC files (but deny writes)
 (allow file-read*
     (literal "{home}/.bashrc")
