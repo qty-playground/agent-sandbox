@@ -2,6 +2,22 @@
 
 Sandbox wrapper for AI agents and automation tools using macOS Seatbelt, protecting sensitive files while allowing normal development workflow.
 
+> [!IMPORTANT]
+> **Personal Experimental Tool**
+>
+> This is a personal experimental sandbox tool customized for macOS use.
+>
+> - Relies on macOS Seatbelt (sandbox-exec), only works on macOS
+> - Designed primarily for personal daily use, general-purpose applicability is still evolving
+> - Feel free to fork or clone for your own use
+> - Please evaluate risks before use; author makes no guarantees for all scenarios
+>
+> **SSH Usage Notes**
+>
+> - SSH private keys are blocked by default (unless using `--allow-ssh-keys`)
+> - For Git operations, use SSH agent: `ssh-add ~/.ssh/your_key`
+> - See [SSH Authentication Guide](README.ssh.md) for detailed setup and troubleshooting
+
 ## Features
 
 ### 🛡️ Three-Layer Security Architecture
@@ -82,6 +98,12 @@ Options:
   --work-dir DIR         Working directory (default: current directory)
   --dry-run              Show profile content without executing
   --help                 Show this help message
+
+Permission Flags:
+  --allow-ssh-keys       Allow reading SSH private keys
+  --allow-env-read       Allow reading environment files (.env, .envrc)
+  --allow-aws-config     Allow reading AWS credentials
+  --allow-cloud-config   Allow reading all cloud provider configs (AWS, GCP, Azure, k8s)
 ```
 
 ### Advanced Usage Examples
@@ -104,20 +126,34 @@ agbox --mode strict codex
 
 # Run in specific working directory
 agbox --work-dir ~/projects/other python test.py
+
+# Grant temporary SSH key access (not recommended, use SSH agent instead)
+agbox --allow-ssh-keys git clone git@github.com:user/repo.git
+
+# Allow reading environment files
+agbox --allow-env-read python script.py
+
+# Combine multiple permission flags
+agbox --allow-aws-config --allow-env-read python deploy.py
 ```
 
 ### Git Operations with SSH
 
-For `git push` to work, add your SSH key to ssh-agent:
+For git operations with SSH authentication (clone, fetch, push), add your SSH key to ssh-agent:
 
 ```bash
 # Add SSH key to agent
-ssh-add ~/.ssh/id_ed25519
+ssh-add ~/.ssh/your_key
 
-# Now git push works in sandbox
-agbox claude
-# (in Claude) git push
+# Verify key is loaded
+ssh-add -l
+
+# Now git operations work in sandbox
+agbox git fetch
+agbox git push
 ```
+
+For detailed SSH setup, troubleshooting, and understanding why SSH agent is recommended over `--allow-ssh-keys`, see the [SSH Authentication Guide](README.ssh.md).
 
 ### Create Alias (Optional)
 
