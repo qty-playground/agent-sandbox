@@ -114,13 +114,37 @@ def check_agent_installed(agent_type: str, check_agbox_installed):
 
 
 @pytest.fixture
-def work_dir(tmp_path: Path) -> Path:
+def work_dir(request) -> Generator[Path, None, None]:
     """
-    Create a temporary working directory for tests.
+    Create a temporary working directory for tests in project root.
 
-    Each test gets its own isolated directory.
+    Unlike using /tmp (which has unrestricted write access in sandbox),
+    this creates test directories under project root to properly test
+    sandbox restrictions. The working directory will have write access
+    via agbox's --work-dir, while other locations remain protected.
+
+    Each test gets its own isolated directory that is cleaned up after the test.
     """
-    return tmp_path
+    import time
+    import shutil
+
+    # Get project root (parent of tests directory)
+    project_root = Path(__file__).parent.parent
+
+    # Create unique test directory name
+    test_name = request.node.name
+    timestamp = int(time.time() * 1000000)  # microseconds for uniqueness
+    test_dir = project_root / f".pytest-tmp-{test_name}-{timestamp}"
+
+    # Create directory
+    test_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        yield test_dir
+    finally:
+        # Cleanup after test
+        if test_dir.exists():
+            shutil.rmtree(test_dir, ignore_errors=True)
 
 
 @pytest.fixture

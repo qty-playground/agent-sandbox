@@ -23,6 +23,10 @@ env/
 tmp/
 temp/
 
+# Pytest temporary test directories
+.pytest-tmp-*/
+.pytest_cache/
+
 # Editor
 .vscode/
 .idea/
