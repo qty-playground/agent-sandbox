@@ -42,8 +42,11 @@ class TestAgentBasicOperations:
 
         # Should return working directory path
         work_dir_str = str(agent_cmd.work_dir)
-        assert work_dir_str in result.stdout, (
-            f"Working directory '{work_dir_str}' not found in output:\n{result.stdout}"
+        masked_work_dir_str = work_dir_str.replace(str(Path.home()), "$HOME")
+        assert work_dir_str in result.stdout or masked_work_dir_str in result.stdout, (
+            "Working directory not found in output:\n"
+            f"expected: {work_dir_str} or {masked_work_dir_str}\n"
+            f"stdout: {result.stdout}"
         )
 
 

@@ -251,13 +251,74 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
     1. Common security rules (sensitive file protection)
     2. Project rules (workspace access)
     3. Agent-specific rules (tool configurations)
+
+    Security model: Deny by default, allow specific operations and paths
     """
     return f"""(version 1)
 
 ;; ========================================
-;; Default allow all operations (protect via explicit deny)
+;; Default deny all operations (allow via explicit rules)
 ;; ========================================
-(allow default)
+(deny default)
+
+;; Allow basic system operations
+(allow process*)
+(allow sysctl*)
+(allow mach*)
+(allow ipc*)
+(allow network*)
+(allow system*)
+
+;; ========================================
+;; HOME DIRECTORY: Deny write by default, allow read
+;; ========================================
+;; Allow reading home directory (needed for shell init and tool configs)
+(allow file-read*
+    (subpath "{home}"))
+
+;; Deny writing to home directory by default
+(deny file-write*
+    (subpath "{home}"))
+
+;; Allow writing to specific home subdirectories
+(allow file-write*
+    (subpath "{home}/.cache")
+    (subpath "{home}/.config")
+    (subpath "{home}/.local/share")
+    (subpath "{home}/.local/state")
+    (regex #"{home}/\\.zcompdump.*$"))
+
+;; Allow temporary and system directories
+(allow file-read* file-write*
+    (subpath "/tmp")
+    (subpath "/var/tmp")
+    (subpath "/private/tmp")
+    (subpath "/private/var/tmp"))
+
+;; Allow reading system directories and root
+(allow file-read*
+    (literal "/")
+    (literal "/Users")
+    (subpath "/usr")
+    (subpath "/bin")
+    (subpath "/sbin")
+    (subpath "/Library")
+    (subpath "/System")
+    (subpath "/Applications")
+    (subpath "/opt")
+    (subpath "/etc")
+    (subpath "/var")
+    (subpath "/private/var"))
+
+;; Allow /dev access (needed for /dev/null, etc)
+(allow file-read* file-write*
+    (subpath "/dev"))
+
+;; Allow Python __pycache__ writes in allowed paths
+(allow file-write*
+    (regex #".*/__pycache__/.*\\.pyc$")
+    (regex #".*/\\.pytest_cache/.*$"))
+
 {get_common_rules(home, allow_ssh_keys, allow_env_read, allow_aws_config, allow_cloud_config)}
 {get_project_rules(work_dir, home)}
 {get_agent_rules(agent, home)}

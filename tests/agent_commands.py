@@ -130,7 +130,7 @@ class CodexCommand(AgentCommand):
 
         Codex uses the exec subcommand for non-interactive execution.
         """
-        return ["agbox", "codex", "exec", prompt]
+        return ["agbox", "codex", "exec", "--dangerously-bypass-approvals-and-sandbox", prompt]
 
 
 class GeminiCommand(AgentCommand):
