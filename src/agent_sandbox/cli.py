@@ -224,21 +224,21 @@ def get_project_rules(work_dir: Path, home: Path) -> str:
 def get_agent_rules(agent: str, home: Path) -> str:
     """
     Common agent configuration rules
-    Always allow writes to common AI agent directories
+    Allow read and write access to AI agent directories
     """
     return f"""
 ;; ========================================
 ;; AGENTS: Common AI agent config directories
 ;; ========================================
 
-;; Allow writing Claude Code config
-(allow file-write*
+;; Allow Claude Code config (read and write)
+(allow file-read* file-write*
     (literal "{home}/.claude.json")
     (subpath "{home}/.claude")
     (subpath "{home}/.config/claude-code"))
 
-;; Allow writing Codex CLI config
-(allow file-write*
+;; Allow Codex CLI config (read and write)
+(allow file-read* file-write*
     (subpath "{home}/.codex"))
 """
 
@@ -270,9 +270,9 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
 (allow system*)
 
 ;; ========================================
-;; HOME DIRECTORY: Deny write by default, allow read
+;; HOME DIRECTORY: Strict dot-file protection
 ;; ========================================
-;; Allow reading home directory (needed for shell init and tool configs)
+;; Allow reading home directory (non-hidden files)
 (allow file-read*
     (subpath "{home}"))
 
@@ -280,8 +280,33 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
 (deny file-write*
     (subpath "{home}"))
 
-;; Allow writing to specific home subdirectories
-(allow file-write*
+;; CRITICAL: Deny all dot-files and dot-directories by default
+;; Only explicitly allowed items below can be accessed
+(deny file-read* file-write*
+    (regex #"{home}/\\..*"))
+
+;; ========================================
+;; ALLOWED: Development tool directories (read-only)
+;; ========================================
+;; Add common development tools here for easy maintenance
+(allow file-read*
+    (subpath "{home}/.m2")           ;; Maven
+    (subpath "{home}/.gradle")       ;; Gradle
+    (subpath "{home}/.npm")          ;; Node.js npm
+    (subpath "{home}/.node")         ;; Node.js
+    (subpath "{home}/.cargo")        ;; Rust
+    (subpath "{home}/.pyenv")        ;; Python version manager
+    (subpath "{home}/.nvm")          ;; Node version manager
+    (subpath "{home}/.rbenv")        ;; Ruby version manager
+    (subpath "{home}/.oh-my-zsh")    ;; Zsh framework
+    (subpath "{home}/.sdkman")       ;; SDK manager
+    (subpath "{home}/miniforge3")    ;; Conda/Mamba
+    (subpath "{home}/.local"))       ;; User-local tools
+
+;; ========================================
+;; ALLOWED: Cache and config directories (read-write)
+;; ========================================
+(allow file-read* file-write*
     (subpath "{home}/.cache")
     (subpath "{home}/.config")
     (subpath "{home}/.local/share")
