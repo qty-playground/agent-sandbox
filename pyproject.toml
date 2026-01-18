@@ -35,7 +35,6 @@ Issues = "https://github.com/qty-playground/agent-sandbox/issues"
 [project.scripts]
 agbox = "agent_sandbox.cli:main"
 agbox-debug = "agent_sandbox.debug:main"
-generate-sandbox-profile = "agent_sandbox.generator:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
