@@ -239,41 +239,6 @@ fi
 
 ---
 
-## Why Not Just Use `--allow-ssh-keys` Flag?
-
-`agbox` provides the `--allow-ssh-keys` flag to relax SSH private key access restrictions:
-
-```bash
-$ agbox --allow-ssh-keys git fetch
-```
-
-This allows programs to directly read SSH private key files. While this solves the problem, it is **not recommended** because:
-
-### Security Comparison
-
-| Approach | Private Key Exposure | Security | Convenience |
-|----------|---------------------|----------|-------------|
-| **SSH Agent (Recommended)** | Keys only in agent memory, programs only get signatures | ✅ High | ✅ High (auto after setup) |
-| **--allow-ssh-keys** | Allows programs to directly read private key files | ⚠️ Low | ✅ High (no setup needed) |
-
-### Advantages of SSH Agent
-
-1. **Principle of Least Privilege**: Programs can only get signatures, not private keys
-2. **Industry Standard**: SSH agent is the standard practice in the SSH ecosystem
-3. **Password Management**: Enter password once, agent handles subsequent authentications
-4. **Cross-tool Support**: All SSH-based tools (git, rsync, scp) support it
-
-### When Can You Use `--allow-ssh-keys`?
-
-Consider using only in these situations:
-- Debugging SSH-related issues
-- Temporary needs in a known-safe environment
-- Unable to use SSH agent (extremely rare)
-
-For general use cases, SSH agent should be preferred.
-
----
-
 ## Troubleshooting
 
 ### Issue 1: `Could not open a connection to your authentication agent`
@@ -431,16 +396,14 @@ agbox git push
 
 1. Auto-load SSH keys on system startup (configure Keychain or shell rc)
 2. Use `agbox` for all git operations
-3. No need to use `--allow-ssh-keys` flag
-4. Enjoy secure and convenient SSH authentication
+3. Enjoy secure and convenient SSH authentication
 
 ---
 
 ## Summary
 
 - **Use SSH Agent**: This is the secure, standard, and recommended approach
-- **Avoid Direct Key Access**: Using `--allow-ssh-keys` reduces security
 - **Configure Auto-loading**: Let SSH agent auto-load commonly used keys on system startup
-- **agbox Is Secure by Default**: Blocking private key access protects your credentials
+- **SSH Private Keys Are Blocked**: agbox blocks direct access to private keys for security
 
 When you properly configure SSH agent, all SSH-based operations inside `agbox` (git, scp, rsync) work smoothly while maintaining high security.

@@ -14,7 +14,7 @@ Sandbox wrapper for AI agents and automation tools using macOS Seatbelt, protect
 >
 > **SSH Usage Notes**
 >
-> - SSH private keys are blocked by default (unless using `--allow-ssh-keys`)
+> - SSH private keys are blocked
 > - For Git operations, use SSH agent: `ssh-add ~/.ssh/your_key`
 > - See [SSH Authentication Guide](README.ssh.md) for detailed setup and troubleshooting
 
@@ -105,7 +105,6 @@ Options:
   --help                 Show this help message
 
 Permission Flags:
-  --allow-ssh-keys       Allow reading SSH private keys
   --allow-env-read       Allow reading environment files (.env, .envrc)
   --allow-aws-config     Allow reading AWS credentials
   --allow-cloud-config   Allow reading all cloud provider configs (AWS, GCP, Azure, k8s)
@@ -132,9 +131,6 @@ agbox --mode strict codex
 # Run in specific working directory
 agbox --work-dir ~/projects/other python test.py
 
-# Grant temporary SSH key access (not recommended, use SSH agent instead)
-agbox --allow-ssh-keys git clone git@github.com:user/repo.git
-
 # Allow reading environment files
 agbox --allow-env-read python script.py
 
@@ -158,7 +154,7 @@ agbox git fetch
 agbox git push
 ```
 
-For detailed SSH setup, troubleshooting, and understanding why SSH agent is recommended over `--allow-ssh-keys`, see the [SSH Authentication Guide](README.ssh.md).
+For detailed SSH setup and troubleshooting, see the [SSH Authentication Guide](README.ssh.md).
 
 ### Create Alias (Optional)
 
