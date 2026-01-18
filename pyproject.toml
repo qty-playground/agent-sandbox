@@ -42,3 +42,23 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 agent_sandbox = ["py.typed"]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-timeout>=2.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "-x",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = []
+timeout = 60

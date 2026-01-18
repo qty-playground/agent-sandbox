@@ -239,6 +239,58 @@ agbox codex
 # Codex can only write to ~/projects/project-b
 ```
 
+## Testing
+
+This project includes automated pytest-based tests for validating agent functionality within the sandbox.
+
+### Running Tests
+
+```bash
+# Install test dependencies
+pip install -e ".[test]"
+
+# Run all tests (default: claude agent)
+pytest tests/ -v
+
+# Test specific agent
+pytest tests/ --agent=claude -v
+pytest tests/ --agent=codex -v
+pytest tests/ --agent=gemini -v
+
+# Quick test (skip slow tests)
+make test-quick
+
+# Using Makefile
+make test           # Run tests with claude
+make test-claude    # Run claude tests
+make test-all       # Run tests for all agents
+```
+
+### Prerequisites for Tests
+
+1. agbox must be installed and accessible in PATH
+2. The agent you want to test must be installed
+3. For git operation tests, SSH agent must be configured:
+   ```bash
+   ssh-add ~/.ssh/your_key
+   ssh-add -l  # Verify key is loaded
+   ```
+
+### Test Coverage
+
+The test suite covers all operations from `docs/test-plan.md`:
+
+- TC-1: Agent launch and working directory access
+- TC-2: File read operations
+- TC-3: File write operations
+- TC-4: File edit operations
+- TC-5: Git branch creation and commits
+- TC-6: Git branch switching
+- TC-7: Git branch deletion
+- TC-8: Script execution
+
+For detailed testing documentation, see [tests/README.md](tests/README.md).
+
 ## Debugging
 
 ### Monitor Sandbox Violations
