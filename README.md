@@ -270,7 +270,7 @@ make test-all       # Run tests for all agents
 
 ### Test Coverage
 
-The test suite covers all operations from `docs/test-plan.md`:
+Pytest-based automated tests cover:
 
 - TC-1: Agent launch and working directory access
 - TC-2: File read operations
@@ -280,6 +280,10 @@ The test suite covers all operations from `docs/test-plan.md`:
 - TC-6: Git branch switching
 - TC-7: Git branch deletion
 - TC-8: Script execution
+- Sensitive file protection (SSH keys, cloud credentials, GPG keys, etc.)
+- Conditional protection (shell RC files, environment files, git config)
+
+**Note**: Tests interact with actual AI agents. Results may vary depending on agent behavior and response quality.
 
 For detailed testing documentation, see [tests/README.md](tests/README.md).
 
