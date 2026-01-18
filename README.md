@@ -20,24 +20,29 @@ Sandbox wrapper for AI agents and automation tools using macOS Seatbelt, protect
 
 ## Features
 
-### 🛡️ Three-Layer Security Architecture
+### 🛡️ Security Model
 
-1. **Common Rules** - Universal protection for sensitive files
-   - SSH keys (`.ssh/`)
-   - Cloud credentials (`.aws/`, `.gcloud/`, `.azure/`, `.kube/`)
-   - GPG keys (`.gnupg/`)
-   - Private keys (`*.pem`, `*.key`, `*_rsa`, etc.)
-   - Environment files (`.env`, `.envrc`)
+Deny-by-default approach: only explicitly allowed operations and paths are permitted.
 
-2. **Project Rules** - Workspace-specific configuration
-   - Full read/write access in current working directory
-   - Read-only access to Git config and Shell RC files
-   - Python `__pycache__` writes
-   - Temp directory access
+**Dot-file Protection**
+- All dot-files and dot-directories in home are denied by default
+- Only explicitly allowed items can be accessed
+- Development tools (`.m2`, `.gradle`, `.npm`, `.cargo`, `.pyenv`, etc.) are read-only
+- Agent directories (`.claude`, `.codex`) have read/write access
 
-3. **Agent-Specific Rules** - Per-agent configuration
-   - Claude: `~/.claude/`
-   - Codex: `~/.codex/`
+**Sensitive Files (always denied)**
+- SSH keys (`.ssh/`)
+- Cloud credentials (`.aws/`, `.gcloud/`, `.azure/`, `.kube/`)
+- GPG keys (`.gnupg/`)
+- Private keys (`*.pem`, `*.key`, `*_rsa`, etc.)
+- Credential/password/token/secret files
+- Environment files (`.env`, `.envrc`)
+
+**Project Access**
+- Full read/write access in current working directory
+- Write access limited to work directory, temp directories, and specific cache locations
+- Shell RC files (`.bashrc`, `.zshrc`, etc.) are read-only
+- Git config files are read-only
 
 ### 🎯 Dynamic Working Directory
 
@@ -176,42 +181,29 @@ ab claude
 
 Each time you run `agbox`:
 
-1. Detects current working directory (`pwd`)
+1. Detects current working directory
 2. Identifies agent type (claude, codex, or generic)
-3. Dynamically generates sandbox profile with three layers:
-   - Common security rules (SSH, GPG, cloud credentials)
-   - Project rules (workspace access)
-   - Agent-specific rules (tool configurations)
+3. Dynamically generates sandbox profile:
+   - Deny-by-default baseline
+   - Sensitive file protection
+   - Dot-file protection with allowed exceptions
+   - Work directory access
+   - Agent-specific configurations
 4. Executes command using `sandbox-exec`
 5. Automatically cleans up temp file after exit
 
-### Example Sandbox Profile Structure
+### Sandbox Profile Structure
 
-```scheme
-(version 1)
-(allow default)  ; Default allow, protect via explicit deny
+The generated profile uses macOS Seatbelt syntax with a deny-by-default approach:
 
-;; ========================================
-;; COMMON: Sensitive file protection
-;; ========================================
-(deny file-read* file-write*
-    (subpath "$HOME/.ssh"))
+- Denies all operations by default
+- Allows specific system operations (process, network, etc.)
+- Denies all dot-files in home directory
+- Explicitly allows needed development tools (read-only)
+- Allows work directory (read/write)
+- Allows agent config directories (read/write)
 
-;; ========================================
-;; PROJECT: Workspace and development tools
-;; ========================================
-(deny file-write*
-    (subpath "$HOME"))
-
-(allow file-write*
-    (subpath "/path/to/current/project"))
-
-;; ========================================
-;; AGENT: Claude Code specific rules
-;; ========================================
-(allow file-write*
-    (subpath "$HOME/.claude"))
-```
+Use `agbox --dry-run <command>` to view the full generated profile.
 
 ## Verification
 
@@ -330,18 +322,16 @@ agbox --dry-run claude
 
 ### Adding Custom Agent Support
 
-Edit `src/agent_sandbox/cli.py` to add your agent:
+Edit `src/agent_sandbox/cli.py` in the `get_agent_rules()` function to add your agent:
 
 ```python
 def get_agent_rules(agent: str, home: Path) -> str:
-    agent_configs = {
-        'your-agent': f"""
-;; Allow writing your agent config
-(allow file-write*
+    """Allow read and write access to AI agent directories"""
+    return f"""
+;; Allow your agent config (read and write)
+(allow file-read* file-write*
     (subpath "{home}/.your-agent"))
-""",
-    }
-    return agent_configs.get(agent, "")
+"""
 ```
 
 ## Requirements
@@ -352,16 +342,16 @@ def get_agent_rules(agent: str, home: Path) -> str:
 
 ## Known Limitations
 
-1. **macOS 14+ Limitations**: Uses `(allow default)` + explicit `deny` approach
+1. **macOS Only**: Relies on macOS Seatbelt (sandbox-exec)
 2. **Symbolic Links**: Handling depends on target path resolution
 3. **Relative Paths**: Sandbox rules use absolute paths
 
 ## Security Notes
 
-1. Regularly review agent operation logs
-2. Don't run unverified agents in sensitive project directories
-3. Consider using `strict` mode for highly sensitive operations
-4. Regularly update protection rules for new threats
+1. Uses deny-by-default model for defense in depth
+2. All dot-files in home directory are blocked by default
+3. Sensitive files (SSH keys, cloud credentials, GPG keys) are always protected
+4. Use `agbox-debug` to monitor sandbox violations in real-time
 
 ## Contributing
 
