@@ -232,6 +232,10 @@ def get_agent_rules(agent: str, home: Path) -> str:
 ;; Allow Codex CLI config (read and write)
 (allow file-read* file-write*
     (subpath "{home}/.codex"))
+
+;; Allow Gemini CLI config (read and write)
+(allow file-read* file-write*
+    (subpath "{home}/.gemini"))
 """
 
 
