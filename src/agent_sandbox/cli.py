@@ -225,6 +225,7 @@ def get_agent_rules(agent: str, home: Path) -> str:
 ;; Allow Claude Code config (read and write)
 (allow file-read* file-write*
     (literal "{home}/.claude.json")
+    (literal "{home}/.claude.json.lock")
     (subpath "{home}/.claude")
     (subpath "{home}/.config/claude-code"))
 
@@ -292,7 +293,8 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
     (subpath "{home}/.oh-my-zsh")    ;; Zsh framework
     (subpath "{home}/.sdkman")       ;; SDK manager
     (subpath "{home}/miniforge3")    ;; Conda/Mamba
-    (subpath "{home}/.local"))       ;; User-local tools
+    (subpath "{home}/.local")        ;; User-local tools
+    (literal "{home}/.condarc"))     ;; Conda config
 
 ;; ========================================
 ;; ALLOWED: Cache and config directories (read-write)
@@ -302,6 +304,7 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
     (subpath "{home}/.config")
     (subpath "{home}/.local/share")
     (subpath "{home}/.local/state")
+    (subpath "{home}/miniforge3/conda-meta")  ;; Conda metadata/history
     (regex #"{home}/\\.zcompdump.*$"))
 
 ;; Allow temporary and system directories
