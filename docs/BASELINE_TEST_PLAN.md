@@ -1,5 +1,8 @@
 # Test Plan: Home Directory Access Baseline
 
+> [!IMPORTANT]
+> This manual test plan has been converted into automated pytest test cases. See `tests/test_agent_baseline.py` for the current implementation. This document is kept for reference and understanding the test objectives.
+
 ## Background
 
 This test plan establishes a baseline for testing agbox functionality in a controlled environment. The goal is to ensure all core features work correctly, including agent launching and git operations with SSH authentication through ssh-agent.
