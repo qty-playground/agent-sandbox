@@ -309,11 +309,13 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
     (subpath "/tmp")
     (subpath "/var/tmp")
     (subpath "/private/tmp")
-    (subpath "/private/var/tmp"))
+    (subpath "/private/var/tmp")
+    (subpath "/private/var/folders"))  ;; User temp files and caches (including mds)
 
 ;; Allow reading system directories and root
 (allow file-read*
     (literal "/")
+    (literal "/private")
     (literal "/Users")
     (subpath "/usr")
     (subpath "/bin")
@@ -324,10 +326,11 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
     (subpath "/opt")
     (subpath "/etc")
     (subpath "/var")
+    (subpath "/private/etc")
     (subpath "/private/var"))
 
 ;; Allow /dev access (needed for /dev/null, etc)
-(allow file-read* file-write*
+(allow file-read* file-write* file-ioctl
     (subpath "/dev"))
 
 ;; Allow Python __pycache__ writes in allowed paths
