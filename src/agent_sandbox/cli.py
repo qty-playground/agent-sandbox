@@ -137,11 +137,45 @@ def get_common_rules(home: Path, allow_env_read: bool = False,
 """
 
 
+def find_git_repo_root(work_dir: Path) -> Optional[Path]:
+    """
+    Find the root directory of the git repository containing work_dir.
+    Returns None if not in a git repository.
+    """
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            cwd=work_dir,
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.returncode == 0:
+            return Path(result.stdout.strip()).resolve()
+    except Exception:
+        pass
+    return None
+
+
 def get_project_rules(work_dir: Path, home: Path) -> str:
     """
     Project-specific rules
     Controls workspace access and common development needs
     """
+    # Detect git repository root
+    git_root = find_git_repo_root(work_dir)
+    git_rule = ""
+
+    # If work_dir is inside a git repository and not at the root,
+    # allow writing to the entire git repository
+    if git_root and git_root != work_dir:
+        git_rule = f"""
+;; Allow writing git repository root (detected: {git_root})
+;; This is needed when working in subdirectories of a git repo
+(allow file-write*
+    (subpath "{git_root}"))
+"""
+
     return f"""
 ;; ========================================
 ;; PROJECT: Workspace and development tools
@@ -154,7 +188,7 @@ def get_project_rules(work_dir: Path, home: Path) -> str:
 ;; Allow writing current working directory
 (allow file-write*
     (subpath "{work_dir}"))
-
+{git_rule}
 ;; Allow Python __pycache__ writes
 (allow file-write*
     (regex #"{home}/\\.local/.*/__pycache__/.*")
