@@ -273,9 +273,28 @@ def get_agent_rules(agent: str, home: Path) -> str:
 """
 
 
+def get_custom_path_rules(allow_paths: List[Path]) -> str:
+    """
+    Generate rules for custom paths specified via --allow-path
+    """
+    if not allow_paths:
+        return ""
+
+    rules = [";; ========================================"]
+    rules.append(";; CUSTOM PATHS: User-specified paths (--allow-path)")
+    rules.append(";; ========================================")
+    rules.append("(allow file-read* file-write*")
+    for path in allow_paths:
+        rules.append(f'    (subpath "{path}")')
+    rules.append(")")
+
+    return "\n".join(rules)
+
+
 def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
                             allow_env_read: bool = False,
-                            allow_aws_config: bool = False, allow_cloud_config: bool = False) -> str:
+                            allow_aws_config: bool = False, allow_cloud_config: bool = False,
+                            allow_paths: Optional[List[Path]] = None) -> str:
     """
     Dynamically generate sandbox profile combining three layers:
     1. Common security rules (sensitive file protection)
@@ -382,6 +401,7 @@ def generate_sandbox_profile(work_dir: Path, home: Path, agent: str = "",
 {get_common_rules(home, allow_env_read, allow_aws_config, allow_cloud_config)}
 {get_project_rules(work_dir, home)}
 {get_agent_rules(agent, home)}
+{get_custom_path_rules(allow_paths or [])}
 """
 
 
@@ -402,6 +422,7 @@ def print_usage(error_msg: Optional[str] = None):
     print("  --allow-env-read       Allow reading environment files (.env, .envrc)", file=sys.stderr)
     print("  --allow-aws-config     Allow reading AWS credentials", file=sys.stderr)
     print("  --allow-cloud-config   Allow reading all cloud provider configs (AWS, GCP, Azure, k8s)", file=sys.stderr)
+    print("  --allow-path, -p PATH  Allow access to custom path (must be under $HOME, repeatable)", file=sys.stderr)
     print("\nExamples:", file=sys.stderr)
     print("  agbox claude                                  # Run Claude Code", file=sys.stderr)
     print("  agbox codex                                   # Run Codex CLI", file=sys.stderr)
@@ -409,11 +430,56 @@ def print_usage(error_msg: Optional[str] = None):
     print("  agbox --verbose claude                        # Show details", file=sys.stderr)
     print("  agbox --dry-run python test.py                # Show profile only", file=sys.stderr)
     print("  agbox --allow-aws-config --allow-env-read c4d # Allow AWS and env access", file=sys.stderr)
+    print("  agbox -p ~/.jenkins-inspector jenkee auth            # Allow custom path", file=sys.stderr)
     print("\nNote: If command is not found, agbox will automatically try to execute it as a shell alias.", file=sys.stderr)
     print("\nDebug tool:", file=sys.stderr)
     print("  agbox-debug                       # Monitor sandbox violations", file=sys.stderr)
 
     sys.exit(1 if error_msg else 0)
+
+
+def validate_allow_path(path: str, home: Path) -> Path:
+    """
+    Validate and resolve a path for --allow-path option.
+
+    Rules:
+    1. Must not be $HOME itself
+    2. Must not be at or above $HOME (e.g., /Users, /)
+
+    Args:
+        path: Path string to validate
+        home: User's home directory
+
+    Returns:
+        Resolved absolute path
+
+    Raises:
+        SystemExit: If path validation fails
+    """
+    # Resolve to absolute path
+    try:
+        resolved = Path(path).resolve()
+    except Exception as e:
+        print(f"Error: Invalid path '{path}': {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Check if path is $HOME itself
+    if resolved == home:
+        print(f"Error: --allow-path cannot be $HOME itself: {resolved}", file=sys.stderr)
+        print(f"Hint: Use a subdirectory like {home}/.config/something", file=sys.stderr)
+        sys.exit(1)
+
+    # Check if path is at or above $HOME level
+    try:
+        # If resolved is a parent of home, it's at or above $HOME
+        resolved.relative_to(home)
+    except ValueError:
+        # resolved is not under home, so it's at or above $HOME
+        print(f"Error: --allow-path must be under $HOME: {resolved}", file=sys.stderr)
+        print(f"Hint: Path must be inside {home}", file=sys.stderr)
+        sys.exit(1)
+
+    return resolved
 
 
 def parse_args(args: List[str]) -> Tuple[Dict[str, any], List[str]]:
@@ -437,6 +503,7 @@ def parse_args(args: List[str]) -> Tuple[Dict[str, any], List[str]]:
         'allow_env_read': False,
         'allow_aws_config': False,
         'allow_cloud_config': False,
+        'allow_paths': [],  # Custom paths to allow access
     }
 
     i = 0
@@ -498,6 +565,12 @@ def parse_args(args: List[str]) -> Tuple[Dict[str, any], List[str]]:
             options['allow_cloud_config'] = True
             i += 1
 
+        elif arg == '--allow-path' or arg == '-p':
+            if i + 1 >= len(args):
+                print_usage("--allow-path/-p requires an argument")
+            options['allow_paths'].append(args[i + 1])
+            i += 2
+
         # Unknown option
         elif arg.startswith('-'):
             print_usage(f"Unknown option: {arg}")
@@ -537,12 +610,19 @@ def main():
     work_dir = Path(options['work_dir']).resolve() if options['work_dir'] else Path.cwd().resolve()
     home = Path.home()
 
+    # Validate custom paths
+    validated_paths = []
+    for path in options['allow_paths']:
+        validated_paths.append(validate_allow_path(path, home))
+    options['allow_paths'] = validated_paths
+
     # Generate sandbox profile
     profile_content = generate_sandbox_profile(
         work_dir, home, options['agent'] or '',
         allow_env_read=options['allow_env_read'],
         allow_aws_config=options['allow_aws_config'],
-        allow_cloud_config=options['allow_cloud_config']
+        allow_cloud_config=options['allow_cloud_config'],
+        allow_paths=options['allow_paths']
     )
 
     # Dry run mode
