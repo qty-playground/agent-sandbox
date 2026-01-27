@@ -259,7 +259,10 @@ def get_agent_rules(agent: str, home: Path) -> str:
 ;; Allow Claude Code config (read and write)
 (allow file-read* file-write*
     (literal "{home}/.claude.json")
+    (literal "{home}/.claude.json.backup")
     (literal "{home}/.claude.json.lock")
+    (literal "{home}/.claude.lock")
+    (regex #"{home}/\\.claude\\.json\\.tmp\\..*$")
     (subpath "{home}/.claude")
     (subpath "{home}/.config/claude-code"))
 
